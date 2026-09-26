@@ -3,6 +3,8 @@ from rest_framework import generics
 from rest_framework.response import Response
 from .models import Job
 from .serializers import JobSerializer
+import time
+from .redis_client import redis_client
 
 
 class JobListCreateView(generics.ListCreateAPIView):
@@ -25,6 +27,17 @@ class JobListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        job_id = serializer.data['id']
+        priority = serializer.data['priority']
+
+        score = (priority * 10**13) + time.time() 
+        """
+            Both priority and time are used bcoz if priority is same then 
+            time can be the differentiating factor and vice versa.
+            Also 10**13 is used so even minor value differences can change the order 
+            strongly.
+        """
+        redis_client.zadd("job_queue" , {str(job_id) : score})
         return Response(serializer.data , status=201 )
 
 class JobDetailView(generics.RetrieveAPIView):
