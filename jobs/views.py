@@ -26,3 +26,8 @@ class JobListCreateView(generics.ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data , status=201 )
+
+class JobDetailView(generics.RetrieveAPIView):
+    queryset = Job.objects.all()
+    serializer_class = JobSerializer
+    lookup_field = 'pk'
