@@ -13,7 +13,7 @@ class Job(models.Model):
     payload = models.JSONField(null=False)
     status = models.CharField(choices=Status.choices , default=Status.PENDING , max_length=20)
     priority = models.IntegerField()
-    idempotency_key = models.CharField(null=True  , unique=True, max_length=225)
+    idempotency_key = models.CharField(null=True  , unique=True, max_length=225 , blank=True)
     locked_by = models.CharField(null=True , max_length=100 )
     lease_expires_at = models.DateTimeField(null=True)
     attempt_count = models.IntegerField(default=0)
