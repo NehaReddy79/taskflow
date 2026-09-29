@@ -7,9 +7,9 @@ from django.db.models import F
 from django.utils import timezone
 from datetime import timedelta
 from jobs.queue import enqueue_job
-LEASE_SECONDS = 60
+LEASE_SECONDS = 30
 REAPER_INTERVAL = 10
-PENDING_SECONDS = 5
+PENDING_SECONDS = 60
 
 class Command(BaseCommand):
 
