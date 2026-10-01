@@ -1,0 +1,47 @@
+services : 
+  postgres:
+    image : postgres:16
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: taskflow_user
+      POSTGRES_PASSWORD: taskflow_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  
+  redis:
+    image : redis:7
+    ports:
+      - "6379:6379"
+  
+  web:
+    build : .
+    command : python manage.py runserver 0.0.0.0:8000
+    ports : 
+      - "8000:8000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DB_NAME: taskflow
+      DB_USER: taskflow_user
+      DB_PASSWORD: taskflow_pass
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on : ['postgres' , 'redis']
+  
+  worker:
+    build : .
+    command : python manage.py run_worker
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DB_NAME: taskflow
+      DB_USER: taskflow_user
+      DB_PASSWORD: taskflow_pass
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on : 
+      - postgres
+      - redis
+
+volumes:
+  postgres_data : 
