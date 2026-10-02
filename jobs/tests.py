@@ -2,6 +2,8 @@ from rest_framework.test import APITestCase
 from .models import Job
 from django.utils import timezone
 from datetime import timedelta
+from jobs.queue import enqueue_job
+from .redis_client import redis_client
 
 class JobIdempotencyTests(APITestCase):
     def test_duplicate_idempotency_key(self):
@@ -44,3 +46,35 @@ class JobDeadTests(APITestCase):
         self.assertEqual(dead_job , 1)
         job.refresh_from_db()
         self.assertEqual(job.status, "DEAD")
+
+class JobPriorityTests(APITestCase):
+    def test_priority_check(self):
+        try:
+
+            job1 = Job.objects.create(job_type="send_email",payload={"to": "user1"},priority=1,status="PENDING",)
+            job2 = Job.objects.create(job_type="send_email",payload={"to": "user1"},priority=5,status="PENDING",)
+
+            enqueue_job(job1)
+            enqueue_job(job2)
+
+            score1 = redis_client.zscore("job_queue" , str(job1.id))
+            score2 = redis_client.zscore("job_queue" , str(job2.id))
+
+            self.assertLess(score1 , score2)
+        finally : 
+            redis_client.zrem("job_queue" , str(job1.id))
+            redis_client.zrem("job_queue" , str(job2.id))
+
+class JobMaxRetriesTest(APITestCase):
+    def test_validate_max_retries(self):
+        data = {
+                    "job_type" : "send_email",
+                    "payload" : {"to" : "user1"},
+                    "priority" : 1,
+                    "idempotency_key" : "abcd",
+                    "max_retries" : 15
+                }
+        response  = self.client.post("/jobs/" , data , format='json')
+
+        self.assertEqual(response.status_code , 400)
+        self.assertEqual(Job.objects.count() , 0)
