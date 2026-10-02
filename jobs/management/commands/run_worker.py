@@ -77,7 +77,7 @@ class Command(BaseCommand):
             job_retry = Job.objects.filter(id=stale_job.pk , status='RUNNING' , lease_expires_at__lt = timezone.now()).update(status='RETRYING'  , locked_by = None , lease_expires_at = None  , updated_at=timezone.now())
 
             if job_retry == 1:
-                enqueue_job(stale_job)
+                enqueue_job(stale_job , delay_seconds=2**stale_job.attempt_count)
 
         cutoff_time = timezone.now()-timedelta(seconds=PENDING_SECONDS)
         orphans = Job.objects.filter(status__in=['PENDING', 'RETRYING'] , updated_at__lt =  cutoff_time)
