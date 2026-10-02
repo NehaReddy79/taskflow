@@ -21,7 +21,7 @@ class JobIdempotencyTests(APITestCase):
         self.assertEqual(job_id , response2.data['id'])
         self.assertEqual(Job.objects.count() , 1)
 
-class JobClainRaceSafetyTests(APITestCase):
+class JobClaimRaceSafetyTests(APITestCase):
     def test_race_safety(self):
         job = Job.objects.create(job_type="send_email",payload={"to": "user1"},priority=1,status="PENDING",)
 
@@ -35,3 +35,12 @@ class JobClainRaceSafetyTests(APITestCase):
         self.assertEqual(claim_b, 0)
         job.refresh_from_db()
         self.assertEqual(job.locked_by , "worker_A")
+
+class JobDeadTests(APITestCase):
+    def test_max_retries_to_dead(self):
+        job = Job.objects.create(job_type = "send_email" ,payload={"to": "user1"},priority=1,status="RUNNING", attempt_count=3 , max_retries= 3 )
+        dead_job = Job.objects.filter(id = job.id , status='RUNNING').update(status="DEAD" , locked_by=None , lease_expires_at = None)
+        
+        self.assertEqual(dead_job , 1)
+        job.refresh_from_db()
+        self.assertEqual(job.status, "DEAD")
